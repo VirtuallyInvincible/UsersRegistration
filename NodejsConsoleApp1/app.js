@@ -1,7 +1,9 @@
 'use strict';
 
-var express = require('express');
-var bodyParser = require('body-parser')
+
+// TODO: Build a separate ReactJS application to create a UI for the APIs.
+// TODO: Wait until mongo connects. Then start listening to incoming user inputs.
+// TODO: Currently the architecture is monolithic. Increase lose coupling by separating into components.
 
 
 const readline = require('readline');
@@ -9,49 +11,72 @@ const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
 });
+const mongoClient = require('mongodb').MongoClient;
+const url = 'mongodb://localhost:27017';
+const express = require('express');
+const app = express();
+const jsonParser = require('body-parser').json();
 
 
-// TODO: Upload the application to GitHub.
-// TODO: Interface with MongoDB instead of the local array to make the data persistent.
-// TODO: Use ReactJS to create a UI for the APIs.
-var users = [];
-var app = express();
-var jsonParser = bodyParser.json();
-app.get('/listUsers', function (req, res) {
-    var usersAsString = '';
-    for (var i = 0; i < users.length; i++) {
-        var user = users[i];
-        usersAsString += JSON.stringify(user) + "\n";
-    }
-    res.send(usersAsString);
-    res.end();
-});
-app.post('/user', jsonParser, function (req, res) {
-    users.push(req.body);
-    res.send('Done.');
-    res.end();
-});
-app.delete('/user/:id', function (req, res) {
-    var id = req.params.id;
-    for (var i = 0; i < users.length; i++) {
-        var user = users[i];
-        if (user.id == id) {
-            users.splice(i, 1);
-            res.send("Done.");
-            res.end();
+var server = null;
+
+
+mongoClient.connect(url, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    }, (err, client) => {
+        if (err) {
+            console.error(err);
+            console.error("Verify that you installed MongoDB and ran mongo via the command prompt in administrator mode.");
             return;
         }
-    }
-    res.send("No user with ID " + id + " exists.");
-    res.end();
-});
 
-var server = app.listen(8081, function () {
-    console.log('Listening at localhost:8081');
-});
+        const db = client.db('users_registration');
+        const users = db.collection('users');
+
+        app.get('/listUsers', function (req, res) {
+            users.find().toArray((err, items) => {
+                if (err) {
+                    console.error(err);
+                }
+
+                res.send(err ? 'An error has occurred.' : JSON.stringify(items, null, '\t'));
+                res.end();
+            });
+        });
+        app.post('/user', jsonParser, function (req, res) {
+            users.insertOne(req.body, (err, result) => {
+                if (err) {
+                    console.error(err);
+                }
+
+                res.send(err ? 'An error has occurred.' : 'Done.');
+                res.end();
+            });
+        });
+        app.delete('/user/:id', function (req, res) {
+            users.remove({ "id": { $eq: parseInt(req.params.id) } }, false, (err, item) => {
+                if (err) {
+                    console.error(err);
+                }
+
+                res.send(err ? "An error has occurred." :
+                    item.result.n == 0 ? "No user with ID " + req.params.id + " exists." : 'Done.');
+                res.end();
+            });
+        });
+
+        server = app.listen(8081, function () {
+            console.log('Listening at localhost:8081');
+        });
+    }
+);
 
 rl.on('line', () => {
     rl.close();
-    server.close();
+    if (server != null) {
+        server.close();
+    }
+    mongoClient.close();
     process.exit(1);
 });
