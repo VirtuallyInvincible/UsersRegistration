@@ -1,7 +1,6 @@
 'use strict';
 
 
-// TODO: Build a separate ReactJS application to create a UI for the APIs.
 // TODO: Wait until mongo connects. Then start listening to incoming user inputs.
 // TODO: Currently the architecture is monolithic. Increase lose coupling by separating into components.
 
@@ -12,10 +11,12 @@ const rl = readline.createInterface({
     output: process.stdout,
 });
 const mongoClient = require('mongodb').MongoClient;
-const url = 'mongodb://localhost:27017';
+const port = 27017;
+const url = `mongodb://localhost:${port}`;
 const express = require('express');
 const app = express();
 const jsonParser = require('body-parser').json();
+const cors = require('cors');
 
 
 var server = null;
@@ -34,13 +35,22 @@ mongoClient.connect(url, {
         const db = client.db('users_registration');
         const users = db.collection('users');
 
+        app.use(cors({ origin: '*' }));
+
         app.get('/listUsers', function (req, res) {
             users.find().toArray((err, items) => {
                 if (err) {
                     console.error(err);
+                    res.send({
+                        'StatusCode': 500,
+                        'ErrorMessage': 'An error has occurred.'
+                    });
+                } else {
+                    res.send({
+                        'StatusCode': 200,
+                        'Data': JSON.stringify(items, null, '\t')
+                    });
                 }
-
-                res.send(err ? 'An error has occurred.' : JSON.stringify(items, null, '\t'));
                 res.end();
             });
         });
@@ -48,26 +58,39 @@ mongoClient.connect(url, {
             users.insertOne(req.body, (err, result) => {
                 if (err) {
                     console.error(err);
+                    res.send({
+                        'StatusCode': 500,
+                        'ErrorMessage': 'An error has occurred.'
+                    });
+                } else {
+                    res.send({
+                        'StatusCode': 201,
+                        'Message': 'Done.'
+                    });
                 }
-
-                res.send(err ? 'An error has occurred.' : 'Done.');
                 res.end();
             });
         });
         app.delete('/user/:id', function (req, res) {
-            users.remove({ "id": { $eq: parseInt(req.params.id) } }, false, (err, item) => {
+            users.remove({ 'id': { $eq: parseInt(req.params.id) } }, false, (err, item) => {
                 if (err) {
                     console.error(err);
+                    res.send({
+                        'StatusCode': 500,
+                        'ErrorMessage': 'An error has occurred.'
+                    });
+                } else {
+                    res.send({
+                        'StatusCode': 201,
+                        'Message': item.result.n == 0 ? `No user with ID ${req.params.id} exists.` : 'Done.'
+                    });
                 }
-
-                res.send(err ? "An error has occurred." :
-                    item.result.n == 0 ? "No user with ID " + req.params.id + " exists." : 'Done.');
                 res.end();
             });
         });
 
-        server = app.listen(8081, function () {
-            console.log('Listening at localhost:8081');
+        server = app.listen(port, function () {
+            console.log(`Listening on port ${port}`);
         });
     }
 );
