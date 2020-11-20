@@ -44,7 +44,7 @@ mongoClient.connect(url, {
                 } else {
                     res.send({
                         'StatusCode': 200,
-                        'Data': JSON.stringify(items, null, '\t')
+                        'Data': items
                     });
                 }
                 res.end();
