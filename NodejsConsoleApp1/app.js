@@ -1,10 +1,6 @@
 'use strict';
 
 
-// TODO: Wait until mongo connects. Then start listening to incoming user inputs.
-// TODO: Currently the architecture is monolithic. Increase lose coupling by separating into components.
-
-
 const readline = require('readline');
 const rl = readline.createInterface({
     input: process.stdin,
@@ -81,7 +77,7 @@ mongoClient.connect(url, {
                     });
                 } else {
                     res.send({
-                        'StatusCode': 201,
+                        'StatusCode': 200,
                         'Message': item.result.n == 0 ? `No user with ID ${req.params.id} exists.` : 'Done.'
                     });
                 }
@@ -91,15 +87,15 @@ mongoClient.connect(url, {
 
         server = app.listen(port, function () {
             console.log(`Listening on port ${port}`);
+
+            rl.on('line', () => {
+                rl.close();
+                if (server != null) {
+                    server.close();
+                }
+                mongoClient.close();
+                process.exit(1);
+            });
         });
     }
-);
-
-rl.on('line', () => {
-    rl.close();
-    if (server != null) {
-        server.close();
-    }
-    mongoClient.close();
-    process.exit(1);
-});
+)
