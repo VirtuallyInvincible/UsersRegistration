@@ -68,7 +68,7 @@ mongoClient.connect(url, {
             });
         });
         app.delete('/user/:id', function (req, res) {
-            users.remove({ 'id': { $eq: parseInt(req.params.id) } }, false, (err, item) => {
+            users.remove({ 'id': { $eq: req.params.id } }, false, (err, item) => {
                 if (err) {
                     console.error(err);
                     res.send({
