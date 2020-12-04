@@ -51,20 +51,24 @@ mongoClient.connect(url, {
             });
         });
         app.post('/user', jsonParser, function (req, res) {
-            users.insertOne(req.body, (err, result) => {
-                if (err) {
-                    console.error(err);
-                    res.send({
-                        'StatusCode': 500,
-                        'ErrorMessage': 'An error has occurred.'
-                    });
-                } else {
-                    res.send({
-                        'StatusCode': 201,
-                        'Message': 'Done.'
+            users.count({ id: req.body.id }, { limit: 1 }, (err, result) => {
+                if (result == 0) {
+                    users.insertOne(req.body, (err, result) => {
+                        if (err) {
+                            console.error(err);
+                            res.send({
+                                'StatusCode': 500,
+                                'ErrorMessage': 'An error has occurred.'
+                            });
+                        } else {
+                            res.send({
+                                'StatusCode': 201,
+                                'Message': 'Done.'
+                            });
+                        }
+                        res.end();
                     });
                 }
-                res.end();
             });
         });
         app.delete('/user/:id', function (req, res) {
