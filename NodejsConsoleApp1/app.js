@@ -51,28 +51,24 @@ mongoClient.connect(url, {
             });
         });
         app.post('/user', jsonParser, function (req, res) {
-            users.count({ id: req.body.id }, { limit: 1 }, (err, result) => {
-                if (result == 0) {
-                    users.insertOne(req.body, (err, result) => {
-                        if (err) {
-                            console.error(err);
-                            res.send({
-                                'StatusCode': 500,
-                                'ErrorMessage': 'An error has occurred.'
-                            });
-                        } else {
-                            res.send({
-                                'StatusCode': 201,
-                                'Message': 'Done.'
-                            });
-                        }
-                        res.end();
+            users.update({ id: req.body.id }, req.body, { upsert: true }, (err, result) => {
+                if (err) {
+                    console.error(err);
+                    res.send({
+                        'StatusCode': 500,
+                        'ErrorMessage': 'An error has occurred.'
+                    });
+                } else {
+                    res.send({
+                        'StatusCode': 201,
+                        'Message': 'Done.'
                     });
                 }
+                res.end();
             });
         });
         app.delete('/user/:id', function (req, res) {
-            users.remove({ 'id': { $eq: req.params.id } }, false, (err, item) => {
+            users.remove({ id: { $eq: req.params.id } }, false, (err, item) => {
                 if (err) {
                     console.error(err);
                     res.send({
